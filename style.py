@@ -1,4 +1,7 @@
 import argparse
+import scipy.misc
+import scipy.io
+import numpy as np
 
 # Constants
 VGG_MODEL = "imagenet-vgg-verydeep-19.mat"
@@ -37,4 +40,23 @@ parser.add_argument("--height",
                     default=150)
 
 arguments = parser.parse_args()
+image_height = arguments.image_height
+image_width = arguments.image_width
 
+
+def initialize_image(path):
+    image = scipy.misc.imread(path)
+
+    image = scipy.misc.imresize(image, (image_height, image_width))
+    return image
+
+
+def main():
+    content_image = initialize_image(arguments.content_image)
+    style_image = initialize_image(arguments.style_image)
+    noise_image = np.random.random((image_height, image_width))
+    # scipy.misc.imshow(noise_image)
+
+
+if __name__ == '__main__':
+    main()
