@@ -5,9 +5,6 @@ import numpy as np
 import tensorflow as tf
 
 # Constants
-VGG_MODEL = "imagenet-vgg-verydeep-19.mat"
-ALPHA = 1
-BETA = 100
 DIMENSIONS = 3
 
 # Code to read command line arguments
@@ -42,6 +39,24 @@ parser.add_argument("--height",
                     dest="image_height",
                     type=int,
                     default=150)
+
+parser.add_argument("--alpha",
+                    help="Enter the weight factor for content",
+                    dest="alpha",
+                    type=int,
+                    default=1)
+
+parser.add_argument("--beta",
+                    help="Enter the weight factor for style",
+                    dest="beta",
+                    type=int,
+                    default=100)
+
+parser.add_argument("--vgg",
+                    help="Enter the VGG19 model",
+                    dest="vgg",
+                    type=str,
+                    default="imagenet-vgg-verydeep-19.mat")
 
 arguments = parser.parse_args()
 image_height = arguments.image_height
@@ -142,7 +157,7 @@ def main():
     style_image = initialize_image(arguments.style_image)
 
     # Load layers of the VGG model
-    vgg_model = load_vgg(VGG_MODEL)
+    vgg_model = load_vgg(arguments.vgg)
 
     # Generate a white noise image
     noise_image = np.random.random((image_height, image_width))
