@@ -3,9 +3,7 @@ import scipy.misc
 import scipy.io
 import numpy as np
 import tensorflow as tf
-
-# Constants
-DIMENSIONS = 3
+import os
 
 # Code to read command line arguments
 parser = argparse.ArgumentParser()
@@ -32,25 +30,25 @@ parser.add_argument("--width",
                     help="Enter the image width",
                     dest="image_width",
                     type=int,
-                    default=200)
+                    default=800)
 
 parser.add_argument("--height",
                     help="Enter the image height",
                     dest="image_height",
                     type=int,
-                    default=150)
+                    default=600)
 
 parser.add_argument("--alpha",
                     help="Enter the weight factor for content",
                     dest="alpha",
                     type=int,
-                    default=1)
+                    default=10)
 
 parser.add_argument("--beta",
                     help="Enter the weight factor for style",
                     dest="beta",
                     type=int,
-                    default=100)
+                    default=1000)
 
 parser.add_argument("--vgg",
                     help="Enter the VGG19 model",
@@ -58,47 +56,96 @@ parser.add_argument("--vgg",
                     type=str,
                     default="imagenet-vgg-verydeep-19.mat")
 
+parser.add_argument("--iterations",
+                    help="Enter the number of iterations",
+                    dest="iterations",
+                    type=int,
+                    default=1000)
+
 arguments = parser.parse_args()
 image_height = arguments.image_height
 image_width = arguments.image_width
 
 
+# Function to resize input image and store it as an array
 def initialize_image(path):
     image = scipy.misc.imread(path)
     image = scipy.misc.imresize(image, (image_height, image_width))
+    image = image[np.newaxis, :, :, :]
     return image
 
 
+# Function to save the output image at each interval
+def save_image(path, image):
+    scipy.misc.imsave(path, image[0])
+
+
+# Function for convolution using weights
 def convolution(prev_layer, weights):
     return tf.nn.conv2d(prev_layer, weights, strides=(1, 1, 1, 1), padding="SAME")
 
 
+# Function for relu using bias
 def relu(prev_layer, bias):
     return tf.nn.relu(prev_layer + bias)
 
 
+# Function to apply average pooling as suggested in the paper
 def avg_pool(prev_layer):
     return tf.nn.avg_pool(prev_layer, ksize=(1, 2, 2, 1), strides=(1, 2, 2, 1), padding="SAME")
 
 
+# Function to get weights to be used for convolution
 def get_weights(layer, i):
     weights = layer[i][0][0][0][0][0]
     weights = tf.constant(weights)
     return weights
 
 
+# Function to get bias to be used for relu
 def get_bias(layer, i):
     bias = layer[i][0][0][0][0][1]
     bias = tf.constant(bias)
     return bias
 
 
+# Function for loss of content image
+def calc_content_loss(p, x):
+    # Equation 1 of the paper
+    return 0.5 * tf.reduce_sum(tf.pow(x - p, 2))
+
+
+# Function for loss of style image
+def calc_style_loss(a, x):
+    M = a.shape[1] * a.shape[2]
+    N = a.shape[3]
+
+    # Gram matrix of original image
+    A = gram_matrix(a, M, N)
+
+    # Gram matrix of generated image
+    G = gram_matrix(x, M, N)
+
+    # Equation 4 of the paper
+    loss = (1 / (4 * (N ^ 2) * (M ^ 2))) * tf.reduce_sum(tf.pow((G - A), 2))
+    return loss
+
+
+# Function to get the gram matrix used to calculate style loss
+def gram_matrix(x, area, depth):
+    # Equation 3 of the paper
+    F = tf.reshape(x, (area, depth))
+    G = tf.matmul(tf.transpose(F), F)
+    return G
+
+
+# Load the VGG 19 network
 def load_vgg(path):
     model = {}
-    vgg_layers = scipy.io.loadmat(path)
-    vgg_layers = vgg_layers["layers"][0]
+    vgg_mat = scipy.io.loadmat(path)
+    vgg_layers = vgg_mat["layers"][0]
 
-    model["input"] = tf.Variable(np.zeros((1, image_height, image_width, DIMENSIONS),
+    model["input"] = tf.Variable(np.zeros((1, image_height, image_width, 3),
                                           dtype=np.float32))
 
     # Group 1
@@ -151,6 +198,7 @@ def load_vgg(path):
     return model
 
 
+# Main function
 def main():
     # Resize content and style images
     content_image = initialize_image(arguments.content_image)
@@ -159,8 +207,54 @@ def main():
     # Load layers of the VGG model
     vgg_model = load_vgg(arguments.vgg)
 
-    # Generate a white noise image
-    noise_image = np.random.random((image_height, image_width))
+    # Initialize TensorFlow
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+
+        # Calculate the content loss using 'conv4_2' as suggested in the paper
+        sess.run(vgg_model["input"].assign(content_image))
+        content_loss = calc_content_loss(sess.run(vgg_model["conv4_2"]), vgg_model["conv4_2"])
+
+        # Calculate style loss using the layers mentioned in the paper
+        style_loss = 0
+        layers = [("conv1_1", 1), ("conv2_1", 2), ("conv3_1", 3), ("conv4_1", 4), ("conv5_1", 5)]
+        sess.run(vgg_model["input"].assign(style_image))
+
+        for layer in layers:
+            E = calc_style_loss(sess.run(vgg_model[layer[0]]), vgg_model[layer[0]])
+            W = layer[1]
+
+            # Equation 5 of the paper
+            style_loss = style_loss + E * W
+
+        # Get the content and style weight factors
+        alpha = arguments.alpha
+        beta = arguments.beta
+
+        # Equation 7 of the paper
+        total_loss = (alpha * content_loss) + (beta * style_loss)
+
+        # Check if output directory exits. If it doesn't then create it
+        output_directory = arguments.output_directory
+        if not os.path.exists(output_directory):
+            os.mkdir(output_directory)
+
+        # Train the network using L-BFGS optimizer
+        iterations = arguments.iterations
+        train_step = tf.contrib.opt.ScipyOptimizerInterface(
+            total_loss,
+            method="L-BFGS-B",
+            options={"maxiter": iterations,
+                     "disp": 100})
+
+        sess.run(tf.global_variables_initializer())
+        sess.run(vgg_model["input"].assign(content_image))
+        train_step.minimize(sess)
+
+        # Save the final image
+        output_image = sess.run(vgg_model["input"])
+        filename = output_directory + "/output_image.jpg"
+        save_image(filename, output_image)
 
 
 if __name__ == "__main__":
