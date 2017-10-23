@@ -1,8 +1,45 @@
 # neural-style
-TensorFlow implementation of "A Neural Algorithm of Artistic Style" by L. Gatys, A. Ecker, and M. Bethge
+TensorFlow implementation of [A Neural Algorithm of Artistic Style](http://arxiv.org/abs/1508.06576) by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge.
 
-License
--------
+This project is about an artificial system based on a Deep Neural Network that creates artistic images using TensorFlow's Machine Learning APIs.
+
+## Examples
+ - Style Image
+<img src="https://github.com/blanyal/neural-style/blob/master/Inputs/starry_night.jpg" width="400">
+
+ - Content Image
+<img src="https://github.com/blanyal/neural-style/blob/master/Inputs/tubingen.jpg" width="400">
+
+ - Output Image
+<img src="https://github.com/blanyal/neural-style/blob/master/Outputs/output_image.jpg" width="400">
+
+## Requirements
+ - Tensorflow
+ - SciPy
+ - NumPy
+ - [VGG 19 model](http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat)
+ 
+## Usage
+**Basic usage**:
+```
+python style.py
+```
+**Options**:
+* `--content`: Name of the content image
+* `--style`: Name of the style image
+* `--output`: Name of the output directory
+* `--width`: Width of the output image
+* `--height`: Height of the output image
+* `--alpha`: Weight factor for content
+* `--beta`: Weight factor for style
+* `--vgg`: Name of the VGG 19 model
+* `--iterations`: Number of iterations
+ 
+ ## References
+ - https://github.com/ckmarkoh/neuralart_tensorflow
+ - https://github.com/log0/neural-style-painting
+
+## License
     MIT License
 
     Copyright (c) 2017 Blanyal D'Souza
