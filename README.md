@@ -14,7 +14,7 @@ This project is about an artificial system based on a Deep Neural Network that c
 <img src="https://github.com/blanyal/neural-style/blob/master/Outputs/output_image.jpg" width="400">
 
 ## Requirements
- - Tensorflow
+ - TensorFlow
  - SciPy
  - NumPy
  - [VGG 19 model](http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat)
