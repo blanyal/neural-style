@@ -8,7 +8,7 @@ This project is about an artificial system based on a Deep Neural Network that c
 <img src="https://github.com/blanyal/neural-style/blob/master/Inputs/starry_night.jpg" width="400">
 
  - Content Image
-<img src="https://github.com/blanyal/neural-style/blob/master/Inputs/tubingen.jpg" width="400">
+<img src="https://github.com/blanyal/neural-style/blob/master/Inputs/erb.jpg" width="400">
 
  - Output Image
 <img src="https://github.com/blanyal/neural-style/blob/master/Outputs/output_image.jpg" width="400">
